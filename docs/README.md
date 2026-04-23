@@ -2,6 +2,10 @@
 
 This folder documents the design, architecture, and per-component behavior of ReasonSoT.
 
+## HTML version
+
+For a browser-friendly read with diagrams rendered inline, open [`docs/html/index.html`](./html/index.html). The HTML pages cover the approach, solution architecture, and workflow with Mermaid diagrams auto-rendered via CDN. Open the file directly in a browser — no build step.
+
 ## Reading order
 
 If you're new to the project, read in this order:

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReasonSoT — HTML Documentation</title>
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-hover: #0550ae;
+    --code-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  header.site {
+    background: linear-gradient(135deg, #0969da 0%, #8250df 100%);
+    color: #fff;
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  header.site h1 { margin: 0 0 0.5rem 0; font-size: 2.4rem; letter-spacing: -0.02em; }
+  header.site p { margin: 0; opacity: 0.92; font-size: 1.15rem; }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2.5rem 2rem 5rem;
+  }
+  .lede {
+    font-size: 1.05rem;
+    color: var(--muted);
+    margin: 0 0 2.5rem 0;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.2rem;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card h2 { margin: 0 0 0.4rem 0; font-size: 1.2rem; }
+  .card h2 a { color: var(--accent); text-decoration: none; }
+  .card h2 a:hover { text-decoration: underline; }
+  .card p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .card .tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    background: #ddf4ff;
+    color: #0550ae;
+    padding: 0.15rem 0.55rem;
+    border-radius: 10px;
+    margin-bottom: 0.6rem;
+    font-weight: 500;
+  }
+  section h2.section-title {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.4rem;
+    margin: 2.5rem 0 1.2rem 0;
+    font-size: 1.4rem;
+  }
+  .links-list { margin: 1rem 0 0 0; padding: 0; list-style: none; }
+  .links-list li { padding: 0.4rem 0; }
+  .links-list a { color: var(--accent); text-decoration: none; }
+  .links-list a:hover { text-decoration: underline; }
+  .links-list .desc { color: var(--muted); font-size: 0.9rem; }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <h1>ReasonSoT</h1>
+  <p>Low-latency dual-process reasoning engine for voice interview agents</p>
+</header>
+
+<main>
+
+<p class="lede">
+  HTML documentation with rendered diagrams. The Markdown sources in <code>docs/</code> contain the same content
+  if you prefer to read on GitHub. Each HTML page is self-contained and renders Mermaid diagrams via CDN.
+</p>
+
+<section>
+  <h2 class="section-title">Primary documents</h2>
+  <div class="grid">
+
+    <div class="card">
+      <span class="tag">Approach</span>
+      <h2><a href="./approach.html">Approach &amp; Solution Design</a></h2>
+      <p>
+        The problem space, the key insight behind dual-process reasoning, and the four ideas
+        that do the real work: zero-cost routing, single-prompt reasoning modes, speculative CoT,
+        and prefix-cached context.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Architecture</span>
+      <h2><a href="./solution-architecture.html">Solution Architecture</a></h2>
+      <p>
+        Component map, module responsibilities, the shared type vocabulary, state boundaries,
+        and extension points. Includes class diagrams and state-transition diagrams.
+      </p>
+    </div>
+
+    <div class="card">
+      <span class="tag">Workflow</span>
+      <h2><a href="./workflow.html">Turn Workflow</a></h2>
+      <p>
+        What happens end-to-end when a user utterance arrives. Sequence diagrams for the
+        System 1, System 2, and Speculative generator paths.
+      </p>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2 class="section-title">Markdown source</h2>
+  <p>The same docs live as Markdown under <code>docs/</code> in the repo, with additional design notes:</p>
+  <ul class="links-list">
+    <li><a href="../overview.md">docs/overview.md</a> <span class="desc">— approach &amp; motivation</span></li>
+    <li><a href="../architecture.md">docs/architecture.md</a> <span class="desc">— component-level architecture</span></li>
+    <li><a href="../workflow.md">docs/workflow.md</a> <span class="desc">— per-turn workflow</span></li>
+    <li><a href="../design/routing.md">docs/design/routing.md</a> <span class="desc">— heuristic router</span></li>
+    <li><a href="../design/reasoning-modes.md">docs/design/reasoning-modes.md</a> <span class="desc">— CoT / MoT / DST / Speculative</span></li>
+    <li><a href="../design/knowledge-graph.md">docs/design/knowledge-graph.md</a> <span class="desc">— in-memory KG</span></li>
+    <li><a href="../design/prefix-caching.md">docs/design/prefix-caching.md</a> <span class="desc">— cache strategy</span></li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <a href="https://github.com/chakra-ai/ReasonSoT">github.com/chakra-ai/ReasonSoT</a>
+</footer>
+
+</body>
+</html>

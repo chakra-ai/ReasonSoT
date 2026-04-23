@@ -53,7 +53,7 @@ Run a single test: `pytest tests/test_router.py::test_simple_pattern_routes_s1 -
 
 ## Docs
 
-Deep documentation lives in [`docs/`](./docs):
+Deep documentation lives in [`docs/`](./docs). For a browser-friendly version with diagrams rendered inline, open [`docs/html/index.html`](./docs/html/index.html).
 
 - [Overview](./docs/overview.md) — the "why" and overall approach
 - [Architecture](./docs/architecture.md) — components and module map

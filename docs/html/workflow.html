@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReasonSoT — Turn Workflow</title>
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --code-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  nav.topnav {
+    background: #0d1117;
+    color: #f0f6fc;
+    padding: 0.8rem 2rem;
+    display: flex;
+    gap: 1.6rem;
+    align-items: center;
+    border-bottom: 1px solid #30363d;
+  }
+  nav.topnav .brand { font-weight: 600; margin-right: auto; }
+  nav.topnav a { color: #58a6ff; text-decoration: none; font-size: 0.95rem; }
+  nav.topnav a:hover { text-decoration: underline; }
+  nav.topnav a.current { color: #f0f6fc; border-bottom: 2px solid #58a6ff; padding-bottom: 2px; }
+
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 2rem 5rem;
+  }
+  h1 { font-size: 2.2rem; letter-spacing: -0.02em; margin: 0.4rem 0 0.6rem; }
+  h2 { font-size: 1.5rem; margin: 2.4rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.15rem; margin: 1.6rem 0 0.5rem; }
+  p { margin: 0.7rem 0; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.88em;
+  }
+  pre code { background: transparent; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; vertical-align: top; }
+  th { background: var(--panel); font-weight: 600; }
+  ul, ol { padding-left: 1.5rem; }
+  .diagram {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem;
+    margin: 1.2rem 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+  .diagram-caption {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-style: italic;
+    margin-top: -0.4rem;
+    margin-bottom: 1.6rem;
+  }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">ReasonSoT docs</span>
+  <a href="./index.html">Home</a>
+  <a href="./approach.html">Approach</a>
+  <a href="./solution-architecture.html">Architecture</a>
+  <a href="./workflow.html" class="current">Workflow</a>
+  <a href="https://github.com/chakra-ai/ReasonSoT" target="_blank">GitHub</a>
+</nav>
+
+<main>
+
+<h1>Turn Workflow</h1>
+<p class="subtitle">End-to-end sequence of what happens when a user utterance arrives. Entry point: <code>InterviewEngine.process_turn(user_input)</code>.</p>
+
+<h2>The 9 steps (overview)</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TD
+    Start([user_input arrives]) --> S1[① Update KG<br/>heuristic extraction]
+    S1 --> S2[② Route<br/>router.route]
+    S2 --> S3{③ KG gap &gt; 0.4<br/>AND S2/CoT?}
+    S3 -- yes --> S3a[upgrade to DST<br/>estimate beam]
+    S3 -- no --> S4
+    S3a --> S4[④ Estimate<br/>thinking budget]
+    S4 --> S5[⑤ Build cache-optimized<br/>messages]
+    S5 --> S6{⑥ Select<br/>generator}
+    S6 -- Speculative --> G1[generate_speculative]
+    S6 -- S2 + DST --> G2[inject DST prompt<br/>→ system2.generate]
+    S6 -- S2 + CoT/MoT --> G3[system2.generate]
+    S6 -- S1 --> G4[system1.generate]
+    G1 --> Stream
+    G2 --> Stream
+    G3 --> Stream
+    G4 --> Stream[Stream TextDelta<br/>to caller]
+    Stream --> S7[⑦ Classify follow-up<br/>S1 JSON call]
+    S7 --> S8[⑧ Suggest<br/>persona switch?]
+    S8 --> S9[⑨ Record<br/>InterviewTurn]
+    S9 --> End([done])
+</pre>
+</div>
+<p class="diagram-caption">Figure 1 — The 9 orchestration steps in <code>process_turn</code>.</p>
+
+<h2>Full sequence diagram</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant Caller as demo.py / caller
+    participant Engine as InterviewEngine
+    participant KG as KnowledgeGraph
+    participant Router as router.route
+    participant EE as early_exit
+    participant Cache as cache.build_*
+    participant Gen as selected generator
+    participant API as Anthropic API
+    participant FU as followup.classify
+
+    Caller->>Engine: process_turn(user_input)
+    Engine->>Engine: turn_count += 1, update phase
+
+    Note over Engine,KG: ① KG update (~0ms)
+    Engine->>KG: extract_from_turn(user, last_agent, turn#)
+    KG-->>Engine: (KG mutated in place)
+    Engine->>Engine: _rebuild_system_blocks()
+
+    Note over Engine,Router: ② Route (microseconds, no LLM)
+    Engine->>Router: route(user_input, phase, chain_depth, ...)
+    Router-->>Engine: RoutingDecision
+
+    alt KG gap > 0.4 and mode == COT
+        Note over Engine: ③ upgrade to DST
+        Engine->>Engine: estimate_beam_from_context()
+        Engine->>Engine: routing.reasoning_mode = DST
+    end
+
+    alt system == 2
+        Note over Engine,EE: ④ size thinking budget
+        Engine->>EE: estimate_thinking_budget(...)
+        EE-->>Engine: ThinkingBudgetEstimate
+    end
+
+    Note over Engine,Cache: ⑤ cache-optimized messages
+    Engine->>Cache: build_messages_with_cache(conversation)
+    Cache-->>Engine: messages with cache_control markers
+
+    Note over Engine,Gen: ⑥ stream response
+    Engine->>Gen: generate(client, messages, system_blocks, routing)
+    Gen->>API: stream_message(model, thinking, cache blocks)
+    loop stream events
+        API-->>Gen: TextDelta / ThinkingDelta
+        Gen-->>Engine: TextDelta (thinking consumed internally)
+        Engine-->>Caller: TextDelta (real-time)
+    end
+    API-->>Gen: final message + usage
+    Gen-->>Engine: StreamDone(usage, latency)
+    Engine-->>Caller: StreamDone
+
+    Note over Engine,FU: ⑦ follow-up classification
+    Engine->>FU: classify_followup(response, user_input, chain_depth)
+    FU->>API: S1 call, JSON output
+    API-->>FU: {"action": "clarify", ...}
+    FU-->>Engine: FollowUpDecision
+    Engine->>Engine: update chain_depth
+
+    Note over Engine: ⑧ persona switch check
+    Engine->>Engine: suggest_persona_switch(...)
+
+    Note over Engine: ⑨ record turn
+    Engine->>Engine: session.turns.append(InterviewTurn(...))
+    Engine-->>Caller: (iterator complete)
+</pre>
+</div>
+<p class="diagram-caption">Figure 2 — Full end-to-end sequence of a single turn.</p>
+
+<h2>Generator selection (step ⑥)</h2>
+
+<p>Step 6 chooses one of four generators based on the <code>RoutingDecision</code>:</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TD
+    R[RoutingDecision] --> D1{mode ==<br/>SPECULATIVE?}
+    D1 -- yes --> SP["generate_speculative<br/>core/speculative.py"]
+    D1 -- no --> D2{system == 2?}
+    D2 -- no --> S1G["system1.generate<br/>core/system1.py"]
+    D2 -- yes --> D3{mode == DST<br/>and KG present?}
+    D3 -- yes --> DSTG["build_dst_prompt<br/>inject into last user msg<br/>→ system2.generate"]
+    D3 -- no --> S2G["system2.generate<br/>mode-specific instruction<br/>prepended to user msg"]
+    style SP fill:#ddf4ff,stroke:#0969da
+    style S1G fill:#dafbe1,stroke:#1a7f37
+    style DSTG fill:#ffebe9,stroke:#cf222e
+    style S2G fill:#ffebe9,stroke:#cf222e
+</pre>
+</div>
+<p class="diagram-caption">Figure 3 — Generator selection tree.</p>
+
+<h2>System 1 path</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant E as InterviewEngine
+    participant S1 as system1.generate
+    participant C as LLMClient
+    participant A as Anthropic
+
+    E->>S1: generate(client, messages, system_blocks)
+    S1->>C: stream_message(model_tier=FAST,<br/>thinking_budget=None)
+    C->>A: POST /messages<br/>(Haiku, stream=True, cache_control)
+    loop
+        A-->>C: content_block_delta
+        C-->>S1: TextDelta
+        S1-->>E: TextDelta (pass-through)
+    end
+    A-->>C: final_message
+    C-->>S1: StreamDone(usage, latency)
+    S1-->>E: StreamDone
+    Note over E: Typical TTFT: 200-400 ms
+</pre>
+</div>
+<p class="diagram-caption">Figure 4 — System 1 fast path. No thinking, pass-through streaming.</p>
+
+<h2>System 2 path (CoT / MoT / DST)</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant E as InterviewEngine
+    participant S2 as system2.generate
+    participant C as LLMClient
+    participant A as Anthropic
+
+    E->>S2: generate(client, messages, system_blocks, routing)
+    S2->>S2: _augment_messages_for_mode(messages, routing)
+    Note right of S2: prepends mode instruction<br/>to last user message<br/>(NOT to system — cache!)
+    S2->>C: stream_message(model_tier=DEEP,<br/>thinking_budget=N, temp=1.0)
+    C->>A: POST /messages<br/>(Sonnet, thinking=enabled)
+    loop
+        A-->>C: thinking_delta (internal)
+        C-->>S2: ThinkingDelta
+        S2->>S2: consume, count words
+        A-->>C: text_delta
+        C-->>S2: TextDelta
+        S2-->>E: TextDelta
+    end
+    A-->>C: final_message
+    C-->>S2: StreamDone(usage, latency)
+    S2-->>E: StreamDone
+    Note over E: Thinking text captured for<br/>next turn's budget multiplier
+</pre>
+</div>
+<p class="diagram-caption">Figure 5 — System 2 path. Thinking deltas never reach the caller; they're consumed internally.</p>
+
+<h2>Speculative path</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant E as InterviewEngine
+    participant Sp as generate_speculative
+    participant C as LLMClient
+    participant H as Haiku
+    participant S as Sonnet
+
+    Note over Sp: Phase 1 — DRAFT
+    Sp->>Sp: _augment_system_for_confidence(system)
+    Sp->>C: complete_message(model=FAST,<br/>+ confidence prompt)
+    C->>H: Haiku call
+    H-->>C: "Draft reply.<br/>[CONFIDENCE: 0.X]"
+    C-->>Sp: (draft_text, usage, latency)
+    Sp->>Sp: _extract_confidence(draft_text)
+
+    alt confidence >= 0.8
+        Note over Sp: Phase 2 — SHIP DRAFT
+        Sp-->>E: TextDelta(clean_draft)
+        Sp-->>E: StreamDone(draft_usage, draft_latency)
+    else confidence < 0.8
+        Note over Sp: Phase 3 — VERIFY with S2
+        Sp->>C: stream_message(model=DEEP,<br/>messages + VERIFY_PROMPT)
+        C->>S: Sonnet call with<br/>extended thinking
+        loop
+            S-->>C: deltas
+            C-->>Sp: TextDelta
+            Sp-->>E: TextDelta
+        end
+        S-->>C: final
+        C-->>Sp: StreamDone
+        Sp->>Sp: combine usage (draft + verify)
+        Sp->>Sp: latency = (draft.start,<br/>draft.ttft, verify.end)
+        Sp-->>E: StreamDone(combined)
+    end
+</pre>
+</div>
+<p class="diagram-caption">Figure 6 — Speculative path. Combined TTFT uses the draft's first-token time — what the user perceives.</p>
+
+<h2>Interview phase transitions</h2>
+
+<p><code>_update_phase()</code> runs at the top of every turn:</p>
+
+<div class="diagram">
+<pre class="mermaid">
+stateDiagram-v2
+    [*] --> OPENING: turn 1
+    OPENING --> CORE: turn &gt; 2
+    CORE --> DEEP_DIVE: chain_depth &gt;= 2
+    CORE --> DEEP_DIVE: kg_gap_score &lt; 0.3
+    DEEP_DIVE --> CORE: chain_depth resets
+    CORE --> CLOSING: turn &gt;= 25
+    DEEP_DIVE --> CLOSING: turn &gt;= 25
+    CLOSING --> [*]
+</pre>
+</div>
+<p class="diagram-caption">Figure 7 — Phase state machine. Phase feeds into router's complexity-score bias.</p>
+
+<p>Phase is a routing signal:</p>
+
+<table>
+  <thead><tr><th>Phase</th><th>Complexity bias</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><code>OPENING</code></td><td>−0.20</td><td>Push toward S1 — rapport building</td></tr>
+    <tr><td><code>CORE</code></td><td>0.00</td><td>No bias</td></tr>
+    <tr><td><code>DEEP_DIVE</code></td><td>+0.20</td><td>Push toward S2 — thorough probing</td></tr>
+    <tr><td><code>CLOSING</code></td><td>−0.15</td><td>Back to S1 — wrap up</td></tr>
+  </tbody>
+</table>
+
+<h2>Streaming contract</h2>
+
+<p><code>process_turn</code> returns an <code>AsyncIterator[StreamEvent]</code>. Callers consume it like this (from <code>demo.py</code>):</p>
+
+<pre><code>async for event in engine.process_turn(user_input):
+    if isinstance(event, TextDelta):
+        print(event.text, end="", flush=True)
+    elif isinstance(event, StreamDone):
+        # per-turn metrics
+        print(f"TTFT: {event.latency.ttft_ms}ms")
+    elif isinstance(event, StreamError):
+        print(f"Error: {event.error}")</code></pre>
+
+<p>Three event types reach the caller:</p>
+
+<table>
+  <thead><tr><th>Event</th><th>When</th><th>Contains</th></tr></thead>
+  <tbody>
+    <tr><td><code>TextDelta</code></td><td>Throughout stream</td><td>A chunk of visible response</td></tr>
+    <tr><td><code>StreamDone</code></td><td>Once per turn</td><td><code>usage</code>, <code>latency</code>, <code>stop_reason</code></td></tr>
+    <tr><td><code>StreamError</code></td><td>On API failure</td><td><code>error</code> string</td></tr>
+  </tbody>
+</table>
+
+<p><code>ThinkingDelta</code> events are <strong>not</strong> yielded to the caller — they're consumed inside <code>system2.generate</code> and <code>speculative.generate_speculative</code>.</p>
+
+<h2>Failure modes</h2>
+
+<table>
+  <thead><tr><th>What fails</th><th>What happens</th></tr></thead>
+  <tbody>
+    <tr><td>Anthropic API error mid-stream</td><td><code>StreamError</code> yielded; partial response (if any) still recorded</td></tr>
+    <tr><td>Follow-up classification fails</td><td>Heuristic fallback in <code>followup._heuristic_classify()</code></td></tr>
+    <tr><td>Speculative draft missing confidence</td><td>Defaults to 0.5 → triggers verify path</td></tr>
+    <tr><td>Speculative S2 verify fails</td><td>Falls back to shipping the draft as-is</td></tr>
+    <tr><td>Persona file missing</td><td><code>switch_persona()</code> returns <code>False</code>, keeps current persona</td></tr>
+    <tr><td>KG extraction throws</td><td>Logged; turn continues with stale KG summary</td></tr>
+  </tbody>
+</table>
+
+<p>The engine is built to <strong>always produce a turn record</strong> even on failure, so session analytics stay consistent.</p>
+
+<h2>Next</h2>
+
+<ul>
+  <li><a href="./approach.html">Approach</a> — why this workflow is shaped this way.</li>
+  <li><a href="./solution-architecture.html">Solution Architecture</a> — the components that implement each step.</li>
+</ul>
+
+</main>
+
+<footer>
+  <a href="https://github.com/chakra-ai/ReasonSoT">github.com/chakra-ai/ReasonSoT</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    securityLevel: 'loose',
+    flowchart: { curve: 'basis', padding: 14 },
+    sequence: { actorMargin: 40 }
+  });
+</script>
+
+</body>
+</html>

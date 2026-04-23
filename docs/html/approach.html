@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReasonSoT — Approach &amp; Solution Design</title>
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-hover: #0550ae;
+    --code-bg: #f6f8fa;
+    --warn-bg: #fff8c5;
+    --warn-border: #d4a72c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  nav.topnav {
+    background: #0d1117;
+    color: #f0f6fc;
+    padding: 0.8rem 2rem;
+    display: flex;
+    gap: 1.6rem;
+    align-items: center;
+    border-bottom: 1px solid #30363d;
+  }
+  nav.topnav .brand { font-weight: 600; margin-right: auto; }
+  nav.topnav a { color: #58a6ff; text-decoration: none; font-size: 0.95rem; }
+  nav.topnav a:hover { text-decoration: underline; }
+  nav.topnav a.current { color: #f0f6fc; border-bottom: 2px solid #58a6ff; padding-bottom: 2px; }
+
+  main {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 2rem 2rem 5rem;
+  }
+  h1 { font-size: 2.2rem; letter-spacing: -0.02em; margin: 0.4rem 0 0.6rem; }
+  h2 { font-size: 1.5rem; margin: 2.4rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.15rem; margin: 1.8rem 0 0.6rem; color: #1f2328; }
+  p { margin: 0.8rem 0; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.88em;
+  }
+  pre code { background: transparent; padding: 0; }
+  blockquote {
+    margin: 1rem 0;
+    padding: 0.8rem 1rem;
+    border-left: 4px solid var(--accent);
+    background: #ddf4ff33;
+    color: #333;
+  }
+  .callout {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    padding: 0.9rem 1.1rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+  }
+  .callout strong { color: #7d4e00; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; }
+  th { background: var(--panel); font-weight: 600; }
+  ul, ol { padding-left: 1.5rem; }
+  .diagram {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem;
+    margin: 1.2rem 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+  .diagram-caption {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-style: italic;
+    margin-top: -0.4rem;
+    margin-bottom: 1.6rem;
+  }
+  .pillar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .pillar {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+  }
+  .pillar h4 { margin: 0 0 0.4rem 0; font-size: 1.02rem; }
+  .pillar p { margin: 0.2rem 0 0; font-size: 0.92rem; color: #333; }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">ReasonSoT docs</span>
+  <a href="./index.html">Home</a>
+  <a href="./approach.html" class="current">Approach</a>
+  <a href="./solution-architecture.html">Architecture</a>
+  <a href="./workflow.html">Workflow</a>
+  <a href="https://github.com/chakra-ai/ReasonSoT" target="_blank">GitHub</a>
+</nav>
+
+<main>
+
+<h1>Approach &amp; Solution Design</h1>
+<p class="subtitle">Why ReasonSoT exists, the key insight behind it, and the four ideas that do the real work.</p>
+
+<h2>The problem</h2>
+
+<p>A voice-based interview agent has three conflicting requirements:</p>
+
+<ol>
+  <li><strong>Feels natural</strong> — time-to-first-token (TTFT) must land under ~600 ms, or the conversation feels awkward.</li>
+  <li><strong>Thinks well</strong> — some questions genuinely need multi-step reasoning: system-design probes, trade-off discussions, adaptive follow-ups.</li>
+  <li><strong>Stays on rails</strong> — the interviewer has a <em>purpose</em>: cover topics at a set depth, adapt to the candidate, and not get lost in tangents.</li>
+</ol>
+
+<p>A single-model setup forces a bad trade-off:</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    subgraph BadChoices["Single-model trade-offs"]
+        direction TB
+        A1["Haiku always<br/>✓ fast TTFT<br/>✗ shallow questions<br/>✗ weak at trade-offs"]
+        A2["Sonnet + thinking always<br/>✓ great questions<br/>✗ 2-4s TTFT<br/>✗ unusable for voice"]
+        A3["Sonnet without thinking<br/>✗ pay the bigger-model cost<br/>✗ no reasoning benefit"]
+    end
+</pre>
+</div>
+<p class="diagram-caption">Figure 1 — The three dead-ends of a single-model voice interview agent.</p>
+
+<h2>The key insight</h2>
+
+<blockquote>
+  Most interview turns don't need deep reasoning. Greetings, acknowledgments, topic transitions, and clarification requests are pattern-matchable. Only the turns that <em>do</em> need deep reasoning should pay the Sonnet-plus-thinking cost — and even then, the thinking budget should scale to the actual complexity of the question.
+</blockquote>
+
+<p>
+  This is a classic <strong>dual-process</strong> framing — System 1 (fast, pattern-based, autonomous) vs. System 2 (slow, deliberate, resource-expensive). ReasonSoT applies it at the model-routing level.
+</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TD
+    U([User utterance])
+    U --> R{Heuristic Router<br/>&lt; 1 ms<br/>no LLM call}
+    R -- "simple pattern<br/>(greeting, ack)" --> S1["System 1<br/>Haiku, no thinking<br/>TTFT ~300 ms"]
+    R -- "complex pattern<br/>(design, trade-offs)" --> S2["System 2<br/>Sonnet + thinking<br/>CoT / MoT / DST<br/>TTFT ~1.5 s"]
+    R -- "borderline" --> SP["Speculative<br/>S1 draft → gate →<br/>S2 verify (if needed)<br/>TTFT ~400 ms"]
+    S1 --> REPLY([Streamed reply])
+    S2 --> REPLY
+    SP --> REPLY
+    REPLY --> KG[(Knowledge Graph<br/>coverage tracking)]
+    KG -.feeds back.-> R
+    style R fill:#fff8c5,stroke:#d4a72c,stroke-width:2px
+    style S1 fill:#dafbe1,stroke:#1a7f37
+    style S2 fill:#ffebe9,stroke:#cf222e
+    style SP fill:#ddf4ff,stroke:#0969da
+</pre>
+</div>
+<p class="diagram-caption">Figure 2 — ReasonSoT's dual-process router splits traffic by pattern match before any LLM cost is paid.</p>
+
+<h2>The four pillars</h2>
+
+<p>Four ideas do the real work. Each pillar has its own design note; this section gives the intuition.</p>
+
+<div class="pillar-grid">
+  <div class="pillar">
+    <h4>1. Zero-cost routing</h4>
+    <p>Regex + signal scoring picks the path in microseconds. No LLM "planner" adding 200 ms.</p>
+  </div>
+  <div class="pillar">
+    <h4>2. Single-prompt reasoning modes</h4>
+    <p>CoT / MoT / DST all stay in one API call. Breadth/depth happens in the thinking window, not in parallel calls.</p>
+  </div>
+  <div class="pillar">
+    <h4>3. Speculative CoT</h4>
+    <p>Haiku drafts with a confidence score. Ship the draft if confident; Sonnet verifies otherwise.</p>
+  </div>
+  <div class="pillar">
+    <h4>4. Prefix-cached context</h4>
+    <p>4 cache breakpoints on base / persona / KG / last-user. 90%+ cache read rate by turn 5.</p>
+  </div>
+</div>
+
+<h3>Pillar 1 — Zero-cost routing</h3>
+
+<p>
+  <code>reason_sot/core/router.py</code> decides between S1, S2, and speculative paths using <strong>only</strong>
+  deterministic Python: regex pattern matches, a technical-term lexicon, conversation phase, and follow-up-chain depth.
+  No LLM call. Latency: microseconds.
+</p>
+
+<p>
+  Every LLM call you can avoid is another ~200 ms of TTFT you don't spend. Routing via an LLM would reintroduce the
+  latency we're trying to avoid.
+</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    U[user_input] --> Sig[compute signals]
+    Sig --> Score[compute complexity score]
+    Score --> Gates{decision gates}
+    Gates -- "simple pattern AND<br/>no deep pattern" --> D1["S1, DIRECT"]
+    Gates -- "score ≥ thr + 0.15<br/>AND 2+ deep patterns" --> D2["S2, MoT"]
+    Gates -- "score ≥ thr + 0.15" --> D3["S2, CoT (full budget)"]
+    Gates -- "score ≥ thr" --> D4["S2, CoT (half budget)"]
+    Gates -- "score ≥ thr − 0.2" --> D5["SPECULATIVE"]
+    Gates -- "else" --> D6["S1, DIRECT"]
+</pre>
+</div>
+<p class="diagram-caption">Figure 3 — The router's decision gates. First match wins.</p>
+
+<h3>Pillar 2 — Single-prompt reasoning modes</h3>
+
+<p>
+  Tree-of-Thought and similar multi-path reasoning frameworks traditionally fan out into N separate LLM calls and
+  synthesize. That's latency- and cost-prohibitive for an interview.
+</p>
+
+<p>ReasonSoT keeps all reasoning in <strong>a single LLM call</strong> and uses the thinking-token budget to simulate breadth/depth exploration:</p>
+
+<table>
+  <thead>
+    <tr><th>Mode</th><th>Shape</th><th>When used</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>CoT</strong></td><td>1 path × N depth steps</td><td>Moderate complexity</td></tr>
+    <tr><td><strong>MoT</strong> (2509.03918)</td><td>R paths × C depth steps</td><td>High complexity with ≥ 2 deep-pattern matches</td></tr>
+    <tr><td><strong>DST</strong> (2603.20267)</td><td>Adaptive beam (1 → 3)</td><td>S2 + KG coverage gap &gt; 0.4</td></tr>
+  </tbody>
+</table>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph Traditional["Traditional ToT — multi-call"]
+        direction TB
+        T1[Path 1 call] --> Ts[Synthesis call]
+        T2[Path 2 call] --> Ts
+        T3[Path 3 call] --> Ts
+        Ts --> Tout["Output<br/>~2-4 round trips<br/>~2-3 s"]
+    end
+    subgraph ReasonSoT["ReasonSoT — single-call MoT"]
+        direction TB
+        M1[Single LLM call] --> MT["Thinking:<br/>Path 1 → depth 1..C<br/>Path 2 → depth 1..C<br/>Path 3 → depth 1..C<br/>Synthesis"]
+        MT --> Mout["Output<br/>1 round trip<br/>~1 s"]
+    end
+    style Tout fill:#ffebe9,stroke:#cf222e
+    style Mout fill:#dafbe1,stroke:#1a7f37
+</pre>
+</div>
+<p class="diagram-caption">Figure 4 — Why single-prompt reasoning beats multi-call ToT for voice: one round trip vs. four.</p>
+
+<p>
+  Only the final response streams to the user. Thinking tokens are consumed internally inside
+  <code>system2.generate</code> and never reach the caller.
+</p>
+
+<h3>Pillar 3 — Speculative CoT for borderline complexity</h3>
+
+<p>
+  For utterances too complex for S1 but not clearly in S2 territory, we run a speculative path:
+</p>
+
+<ol>
+  <li><strong>Draft</strong> — Haiku generates a response and appends a self-assessed confidence score <code>[CONFIDENCE: 0.X]</code>.</li>
+  <li><strong>Gate</strong> — if confidence ≥ 0.8, ship the draft. The user sees Haiku-speed TTFT.</li>
+  <li><strong>Verify</strong> — otherwise, Sonnet gets the draft plus a "verify and improve" prompt. Cheaper than generating from scratch.</li>
+</ol>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    participant U as User
+    participant E as Engine
+    participant H as Haiku (S1)
+    participant S as Sonnet (S2)
+
+    U->>E: utterance
+    E->>H: draft with confidence prompt
+    H-->>E: "Reply. [CONFIDENCE: 0.X]"
+
+    alt confidence ≥ 0.8
+        Note over E,H: 🟢 Fast path — ship draft
+        E-->>U: draft (TTFT ~400ms)
+    else confidence &lt; 0.8
+        Note over E,S: 🟡 Verify path
+        E->>S: "verify and improve this draft"
+        S-->>E: refined response
+        E-->>U: refined (TTFT from draft, end from S)
+    end
+</pre>
+</div>
+<p class="diagram-caption">Figure 5 — Speculative CoT: most borderline turns ship at Haiku speed; only the genuinely hard ones pay for Sonnet.</p>
+
+<p>
+  <strong>Net effect</strong>: 48–66% latency reduction on medium-complexity turns compared to always using S2.
+</p>
+
+<h3>Pillar 4 — Prefix-cached persona + knowledge-graph context</h3>
+
+<p>
+  Anthropic's prompt cache supports 4 ephemeral cache breakpoints per request. We place them strategically so that
+  only the <em>dynamic tail</em> of each request needs fresh computation:
+</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    subgraph Req["Request structure (per turn)"]
+        direction TB
+        B1["Block 1: base system<br/>never changes<br/>✓ cache read"]
+        B2["Block 2: persona<br/>changes on switch only<br/>✓ cache read"]
+        B3["Block 3: KG summary<br/>rewritten each turn<br/>✗ cache write"]
+        B4["Prior messages<br/>byte-identical<br/>✓ cache read"]
+        B5["Last user message<br/>new each turn<br/>✗ cache write"]
+    end
+    style B1 fill:#dafbe1,stroke:#1a7f37
+    style B2 fill:#dafbe1,stroke:#1a7f37
+    style B3 fill:#ffebe9,stroke:#cf222e
+    style B4 fill:#dafbe1,stroke:#1a7f37
+    style B5 fill:#ffebe9,stroke:#cf222e
+</pre>
+</div>
+<p class="diagram-caption">Figure 6 — Cache-control block placement. Green blocks hit the cache (90% discount on input token cost); red blocks are rewritten each turn.</p>
+
+<p>
+  The knowledge graph itself is an in-memory, heuristic-built structure (no LLM call). Each turn updates nodes/edges
+  from the user's utterance; the serialized summary goes into a cached system block so the model always has
+  structured context about what's been discussed — without re-sending the full transcript uncached.
+</p>
+
+<h2>How the pillars compose</h2>
+
+<p>The four pillars don't sit in isolation — they compose into one per-turn pipeline. Every turn walks these steps:</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    Start([user utterance]) --> P1["① KG update<br/>(heuristic, ~0ms)"]
+    P1 --> P2["② Route<br/>(Pillar 1, microseconds)"]
+    P2 --> P3{KG gap &gt; 0.4?}
+    P3 -- yes --> P3a[upgrade CoT → DST<br/>estimate beam]
+    P3 -- no --> P4
+    P3a --> P4["③ Size thinking budget<br/>(adaptive, Pillar 2)"]
+    P4 --> P5["④ Build cache-optimized<br/>messages (Pillar 4)"]
+    P5 --> P6{Path?}
+    P6 -- S1 --> G1[Haiku stream]
+    P6 -- S2 --> G2[Sonnet + thinking<br/>Pillar 2]
+    P6 -- Speculative --> G3[Pillar 3<br/>draft → gate → verify]
+    G1 --> P7[⑤ Classify follow-up<br/>S1 JSON call]
+    G2 --> P7
+    G3 --> P7
+    P7 --> P8[⑥ Record turn +<br/>persona-switch check]
+    P8 --> End([done])
+</pre>
+</div>
+<p class="diagram-caption">Figure 7 — End-to-end turn pipeline. See <a href="./workflow.html">Workflow</a> for the full sequence diagram.</p>
+
+<h2>What this is — and isn't</h2>
+
+<div class="callout">
+  <strong>ReasonSoT is:</strong>
+  <ul>
+    <li>A Python library for building voice-interview reasoning</li>
+    <li>Text-in, text-out with streaming — pair with ASR/TTS for full voice</li>
+    <li>Off-the-shelf Claude Haiku + Sonnet; all behavior comes from prompting, routing, and cache placement</li>
+  </ul>
+  <strong>ReasonSoT is not:</strong>
+  <ul>
+    <li>A voice stack (no ASR/TTS layer)</li>
+    <li>An agent framework (no tool use, no planning loop)</li>
+    <li>A fine-tuned model (no training pipeline)</li>
+  </ul>
+</div>
+
+<h2>How we validate this works</h2>
+
+<p>
+  The <code>benchmarks/</code> harness runs scripted candidate responses through multiple configurations
+  (S1-only, S2-always-with-CoT, full ReasonSoT) and scores each session on:
+</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    subgraph Inputs["Inputs"]
+        Sc["Scripted scenarios<br/>(technical, behavioral, mixed)"]
+        Cf["Configs:<br/>s1_only<br/>s2_cot<br/>reason_sot"]
+    end
+    subgraph Runner["run_benchmarks.py"]
+        Exec[Execute session]
+    end
+    subgraph Scoring["Scoring (scoring/)"]
+        M1["Depth"]
+        M2["Breadth"]
+        M3["Persona consistency"]
+        M4["Follow-up relevance"]
+        L["TTFT, total ms,<br/>cache hit rate,<br/>thinking tokens"]
+    end
+    Output[Comparison JSON +<br/>side-by-side report]
+
+    Sc --> Exec
+    Cf --> Exec
+    Exec --> M1
+    Exec --> M2
+    Exec --> M3
+    Exec --> M4
+    Exec --> L
+    M1 --> Output
+    M2 --> Output
+    M3 --> Output
+    M4 --> Output
+    L --> Output
+</pre>
+</div>
+<p class="diagram-caption">Figure 8 — Benchmark harness pipeline. Each config runs the same scenario; scores are compared side-by-side.</p>
+
+<h2>Next</h2>
+
+<ul>
+  <li><a href="./solution-architecture.html">Solution Architecture</a> — how these ideas are wired up in code.</li>
+  <li><a href="./workflow.html">Workflow</a> — follow a user utterance through the full pipeline.</li>
+</ul>
+
+</main>
+
+<footer>
+  <a href="https://github.com/chakra-ai/ReasonSoT">github.com/chakra-ai/ReasonSoT</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    securityLevel: 'loose',
+    flowchart: { curve: 'basis', padding: 14 },
+    sequence: { actorMargin: 40 }
+  });
+</script>
+
+</body>
+</html>

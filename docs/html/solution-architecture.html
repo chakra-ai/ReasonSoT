@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReasonSoT — Solution Architecture</title>
+<style>
+  :root {
+    --fg: #1f2328;
+    --muted: #656d76;
+    --bg: #ffffff;
+    --panel: #f6f8fa;
+    --border: #d0d7de;
+    --accent: #0969da;
+    --accent-hover: #0550ae;
+    --code-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    line-height: 1.7;
+    font-size: 16px;
+  }
+  nav.topnav {
+    background: #0d1117;
+    color: #f0f6fc;
+    padding: 0.8rem 2rem;
+    display: flex;
+    gap: 1.6rem;
+    align-items: center;
+    border-bottom: 1px solid #30363d;
+  }
+  nav.topnav .brand { font-weight: 600; margin-right: auto; }
+  nav.topnav a { color: #58a6ff; text-decoration: none; font-size: 0.95rem; }
+  nav.topnav a:hover { text-decoration: underline; }
+  nav.topnav a.current { color: #f0f6fc; border-bottom: 2px solid #58a6ff; padding-bottom: 2px; }
+
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 2rem 5rem;
+  }
+  h1 { font-size: 2.2rem; letter-spacing: -0.02em; margin: 0.4rem 0 0.6rem; }
+  h2 { font-size: 1.5rem; margin: 2.4rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.15rem; margin: 1.6rem 0 0.5rem; }
+  p { margin: 0.7rem 0; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-top: 0; }
+  code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--code-bg);
+    padding: 0.15em 0.4em;
+    border-radius: 3px;
+    font-size: 0.88em;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.88em;
+  }
+  pre code { background: transparent; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; vertical-align: top; }
+  th { background: var(--panel); font-weight: 600; }
+  ul, ol { padding-left: 1.5rem; }
+  .diagram {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem;
+    margin: 1.2rem 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+  .diagram-caption {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-style: italic;
+    margin-top: -0.4rem;
+    margin-bottom: 1.6rem;
+  }
+  .toc {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0 2rem;
+  }
+  .toc h3 { margin: 0 0 0.5rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .toc ol { margin: 0; padding-left: 1.2rem; }
+  .toc a { color: var(--accent); text-decoration: none; font-size: 0.95rem; }
+  .toc a:hover { text-decoration: underline; }
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <span class="brand">ReasonSoT docs</span>
+  <a href="./index.html">Home</a>
+  <a href="./approach.html">Approach</a>
+  <a href="./solution-architecture.html" class="current">Architecture</a>
+  <a href="./workflow.html">Workflow</a>
+  <a href="https://github.com/chakra-ai/ReasonSoT" target="_blank">GitHub</a>
+</nav>
+
+<main>
+
+<h1>Solution Architecture</h1>
+<p class="subtitle">Component-level architecture of ReasonSoT — what each module is responsible for, how they're wired together, and which interfaces are load-bearing.</p>
+
+<div class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#overview">System overview</a></li>
+    <li><a href="#components">Component map</a></li>
+    <li><a href="#responsibilities">Module responsibilities</a></li>
+    <li><a href="#types">Shared types</a></li>
+    <li><a href="#state">State boundaries</a></li>
+    <li><a href="#phases">Interview phases</a></li>
+    <li><a href="#extension">Extension points</a></li>
+    <li><a href="#constraints">Design constraints</a></li>
+  </ol>
+</div>
+
+<h2 id="overview">1. System overview</h2>
+
+<p>ReasonSoT is a Python library with five internal layers, one LLM boundary, and three external entry points:</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph Entry["Entry points"]
+        direction LR
+        D["demo.py<br/>interactive CLI"]
+        B["run_benchmarks.py"]
+        T["pytest suite"]
+    end
+
+    subgraph Orch["① Orchestration — reason_sot/interview/"]
+        IE["InterviewEngine<br/>engine.py"]
+        FU["followup.py"]
+        KG["knowledge_graph.py"]
+    end
+
+    subgraph Core["② Reasoning — reason_sot/core/"]
+        direction LR
+        RT["router.py"]
+        S1["system1.py"]
+        S2["system2.py"]
+        SP["speculative.py"]
+        MT["mot.py"]
+        DS["dst.py"]
+        EE["early_exit.py"]
+    end
+
+    subgraph LLM["③ LLM boundary — reason_sot/llm/"]
+        CL["client.py"]
+        CA["cache.py"]
+        MD["models.py"]
+    end
+
+    subgraph Per["④ Persona — reason_sot/persona/"]
+        PM["manager.py"]
+        PR["profiles.py"]
+        DF[("definitions/*.yaml")]
+    end
+
+    subgraph Sc["⑤ Scoring — reason_sot/scoring/"]
+        MT2["metrics.py"]
+        LT["latency.py"]
+        BM["benchmarks.py"]
+    end
+
+    ExtAPI["Anthropic API<br/>(Haiku + Sonnet)"]
+
+    D --> IE
+    B --> IE
+    B --> BM
+    T --> IE
+    T --> RT
+
+    IE --> RT
+    IE --> KG
+    IE --> FU
+    IE --> CA
+    IE --> PM
+    IE -- S2 --> S2
+    IE -- S1 --> S1
+    IE -- Spec --> SP
+
+    S2 --> MT
+    S2 --> DS
+    S2 --> EE
+    SP --> S1
+    SP --> S2
+
+    S1 --> CL
+    S2 --> CL
+    SP --> CL
+    FU --> CL
+
+    CL --> MD
+    CL --> CA
+    CL --> ExtAPI
+
+    PM --> PR
+    PM --> DF
+
+    BM --> MT2
+    BM --> LT
+</pre>
+</div>
+<p class="diagram-caption">Figure 1 — High-level component map. Orchestration sits on top; the reasoning core sits on the LLM boundary; persona + scoring are cross-cutting.</p>
+
+<h2 id="components">2. Component map (at the file level)</h2>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    subgraph repo["reason_sot/"]
+        direction TB
+        subgraph I["interview/"]
+            direction TB
+            IE["engine.py"]
+            FU["followup.py"]
+            KG["knowledge_graph.py"]
+            CR["credit.py"]
+        end
+        subgraph C["core/"]
+            direction TB
+            RT["router.py"]
+            S1["system1.py"]
+            S2["system2.py"]
+            SP["speculative.py"]
+            MT["mot.py"]
+            DS["dst.py"]
+            EE["early_exit.py"]
+        end
+        subgraph L["llm/"]
+            direction TB
+            CL["client.py"]
+            CA["cache.py"]
+            MD["models.py"]
+        end
+        subgraph P["persona/"]
+            direction TB
+            PM["manager.py"]
+            PR["profiles.py"]
+            DF["definitions/"]
+        end
+        subgraph SC["scoring/"]
+            direction TB
+            MM["metrics.py"]
+            LA["latency.py"]
+            BM["benchmarks.py"]
+        end
+        TY["types.py<br/>(shared vocabulary)"]
+    end
+
+    I --> C
+    I --> L
+    I --> P
+    C --> L
+    P --> PR
+    SC --> TY
+    I --> TY
+    C --> TY
+    L --> TY
+</pre>
+</div>
+<p class="diagram-caption">Figure 2 — File-level layout. <code>types.py</code> is the shared vocabulary — every package depends on it, nothing else depends on any package outside its layer.</p>
+
+<h2 id="responsibilities">3. Module responsibilities</h2>
+
+<h3>Orchestration — <code>reason_sot/interview/</code></h3>
+
+<p>Everything that ties per-turn state together.</p>
+
+<table>
+  <thead><tr><th>File</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>engine.py</code> — <code>InterviewEngine</code></td>
+      <td>Top-level orchestrator. <code>process_turn(user_input)</code> is the only entry point callers need. Holds per-session state: conversation history, phase, follow-up chain depth, persona, KG.</td>
+    </tr>
+    <tr>
+      <td><code>followup.py</code></td>
+      <td>Classifies candidate response into <code>NEXT_TOPIC</code> / <code>CLARIFY</code> / <code>EXPLORE</code> using a Haiku call with JSON output. Heuristic fallback if the LLM call fails.</td>
+    </tr>
+    <tr>
+      <td><code>knowledge_graph.py</code></td>
+      <td>In-memory graph of topics, entities, skills, experiences. Updated each turn via regex extraction. Serializes to a summary string for the cached system block.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Reasoning — <code>reason_sot/core/</code></h3>
+
+<p>Pure reasoning logic. No session state, no persona logic — these modules take messages in and yield stream events out.</p>
+
+<table>
+  <thead><tr><th>File</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><code>router.py</code></td><td>Deterministic routing: user input → <code>RoutingDecision</code>. No LLM call.</td></tr>
+    <tr><td><code>system1.py</code></td><td>Thin wrapper: Haiku, no thinking, 512 max tokens.</td></tr>
+    <tr><td><code>system2.py</code></td><td>Sonnet with extended thinking. Injects CoT/MoT/DST instruction into the <em>last user message</em> (not system prompt — that would bust cache).</td></tr>
+    <tr><td><code>mot.py</code></td><td>Matrix-of-Thought prompt builder. <code>MoTConfig.from_signals(...)</code> picks broad/deep/balanced.</td></tr>
+    <tr><td><code>dst.py</code></td><td>Domain-Specialized Tree prompt builder with adaptive beam logic.</td></tr>
+    <tr><td><code>speculative.py</code></td><td>S1 draft → confidence gate → optional S2 verify. Combines usage and latency from both calls.</td></tr>
+    <tr><td><code>early_exit.py</code></td><td>Pre-call thinking-budget sizing; post-call analysis for adaptive multiplier on next turn.</td></tr>
+  </tbody>
+</table>
+
+<h3>LLM boundary — <code>reason_sot/llm/</code></h3>
+
+<p>Everything that talks to Anthropic goes through here.</p>
+
+<table>
+  <thead><tr><th>File</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><code>client.py</code> — <code>LLMClient</code></td><td>Async streaming wrapper. Yields <code>StreamEvent</code>. Forces <code>temperature=1.0</code> when thinking is enabled.</td></tr>
+    <tr><td><code>cache.py</code></td><td>Builds the 4-block cache-controlled system array and marks the last user message.</td></tr>
+    <tr><td><code>models.py</code></td><td>Model registry: <code>ModelTier.FAST / DEEP</code> → <code>ModelSpec</code>. Override via <code>override_models()</code>.</td></tr>
+  </tbody>
+</table>
+
+<h3>Persona — <code>reason_sot/persona/</code></h3>
+
+<p>Drives <em>what the interviewer is</em> — their role, domain, topics to cover, decision patterns.</p>
+
+<table>
+  <thead><tr><th>File</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><code>profiles.py</code></td><td>Pydantic models: <code>PersonaProfile</code>, <code>TopicArea</code> (priority 1=MUST / 2=SHOULD / 3=OPTIONAL), <code>DecisionPattern</code>.</td></tr>
+    <tr><td><code>manager.py</code></td><td>Loads YAML, renders <code>[base_system, persona_prompt]</code> for the cache builder, suggests persona switches.</td></tr>
+    <tr><td><code>definitions/*.yaml</code></td><td>Shipped personas: <code>technical_interviewer</code>, <code>behavioral_interviewer</code>, <code>career_coach</code>.</td></tr>
+  </tbody>
+</table>
+
+<h3>Scoring — <code>reason_sot/scoring/</code></h3>
+
+<p>Post-hoc analysis. Not on the hot path.</p>
+
+<table>
+  <thead><tr><th>File</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><code>metrics.py</code></td><td>Four quality scores (depth / breadth / persona / follow-up relevance), weighted into an overall score.</td></tr>
+    <tr><td><code>latency.py</code></td><td>TTFT / total-duration / cache-hit-rate profiler.</td></tr>
+    <tr><td><code>benchmarks.py</code></td><td>Comparative harness: ReasonSoT vs. S1-only vs. S2-always.</td></tr>
+  </tbody>
+</table>
+
+<h2 id="types">4. Shared types</h2>
+
+<p>All shared types live in <code>reason_sot/types.py</code>. These are the load-bearing ones:</p>
+
+<div class="diagram">
+<pre class="mermaid">
+classDiagram
+    class RoutingDecision {
+        +int system
+        +ReasoningMode reasoning_mode
+        +int thinking_budget
+        +int beam_width
+        +float confidence
+        +str rationale
+    }
+    class ReasoningMode {
+        &lt;&lt;enum&gt;&gt;
+        DIRECT
+        COT
+        MOT
+        DST
+        SPECULATIVE
+    }
+    class FollowUpDecision {
+        +FollowUpAction action
+        +str reason
+        +str suggested_question
+        +str topic
+    }
+    class FollowUpAction {
+        &lt;&lt;enum&gt;&gt;
+        NEXT_TOPIC
+        CLARIFY
+        EXPLORE
+    }
+    class InterviewTurn {
+        +int turn_number
+        +str user_input
+        +str agent_response
+        +RoutingDecision routing
+        +FollowUpDecision follow_up
+        +TokenUsage usage
+        +LatencyMetrics latency
+        +InterviewPhase phase
+        +str model_used
+    }
+    class InterviewSession {
+        +str session_id
+        +str persona_name
+        +list~InterviewTurn~ turns
+        +dict knowledge_graph_snapshot
+        +float started_at
+        +float ended_at
+    }
+    class StreamEvent {
+        &lt;&lt;union&gt;&gt;
+    }
+    class TextDelta { +str text }
+    class ThinkingDelta { +str text }
+    class StreamDone { +TokenUsage usage; +LatencyMetrics latency }
+    class StreamError { +str error }
+    RoutingDecision --> ReasoningMode
+    FollowUpDecision --> FollowUpAction
+    InterviewTurn --> RoutingDecision
+    InterviewTurn --> FollowUpDecision
+    InterviewSession --> InterviewTurn
+    StreamEvent &lt;|-- TextDelta
+    StreamEvent &lt;|-- ThinkingDelta
+    StreamEvent &lt;|-- StreamDone
+    StreamEvent &lt;|-- StreamError
+</pre>
+</div>
+<p class="diagram-caption">Figure 3 — Class diagram of the shared type vocabulary.</p>
+
+<h2 id="state">5. State boundaries</h2>
+
+<p>Three distinct state lifetimes:</p>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    subgraph PP["① Per-process (process lifetime)"]
+        direction TB
+        MR["MODELS registry<br/>llm/models.py"]
+        AP["_ALL_PERSONAS<br/>preload_all_personas()"]
+    end
+
+    subgraph PS["② Per-InterviewEngine (session lifetime)"]
+        direction TB
+        CV["_conversation: list[dict]"]
+        SS["_session: InterviewSession"]
+        KG["_kg: KnowledgeGraph"]
+        ST["_phase, _turn_count<br/>_followup_chain_depth<br/>_current_topic<br/>_last_agent_confidence<br/>_last_thinking_analysis"]
+        SB["_system_blocks<br/>(rebuilt each turn)"]
+    end
+
+    subgraph PC["③ Per-LLM-call (request lifetime)"]
+        direction TB
+        SE["stream events"]
+        UG["TokenUsage"]
+        LA["LatencyMetrics"]
+    end
+
+    style PP fill:#ddf4ff,stroke:#0969da
+    style PS fill:#fff8c5,stroke:#d4a72c
+    style PC fill:#dafbe1,stroke:#1a7f37
+</pre>
+</div>
+<p class="diagram-caption">Figure 4 — State lifetime boundaries. <code>InterviewEngine</code> holds mutable state and is not thread-safe — create one per session. <code>LLMClient</code> is safe to share.</p>
+
+<h3>Per-turn state mutations</h3>
+
+<div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant S as SessionState
+    participant E as Engine.process_turn
+    participant KG as KnowledgeGraph
+
+    Note over E: turn N begins
+    E->>S: _turn_count += 1
+    E->>S: _update_phase()
+    E->>S: _conversation.append(user)
+    E->>KG: extract_from_turn(user, last_agent, N)
+    KG-->>S: (nodes/edges/clusters mutated)
+    E->>S: _rebuild_system_blocks()
+    Note over E: routing &amp; generation (read-only on state)
+    E->>S: _conversation.append(assistant)
+    E->>S: _last_thinking_analysis = analyze(thinking)
+    E->>S: _followup_chain_depth updated
+    E->>S: _current_topic = follow_up.topic
+    E->>S: _persona_switch_suggested = ...
+    E->>S: _session.turns.append(turn)
+    Note over E: turn N complete
+</pre>
+</div>
+<p class="diagram-caption">Figure 5 — State mutations per turn, in order.</p>
+
+<h2 id="phases">6. Interview phases</h2>
+
+<p>
+  The phase state machine drives routing signals. <code>_update_phase()</code> runs at the top of every turn and
+  reads <code>turn_count</code>, <code>followup_chain_depth</code>, and KG coverage gap score.
+</p>
+
+<div class="diagram">
+<pre class="mermaid">
+stateDiagram-v2
+    [*] --> OPENING: turn 1
+    OPENING: Rapport building<br/>complexity bias: −0.20
+    CORE: Main interview<br/>complexity bias: 0.00
+    DEEP_DIVE: Deep probing<br/>complexity bias: +0.20
+    CLOSING: Wrap up<br/>complexity bias: −0.15
+
+    OPENING --> CORE: turn &gt; 2
+    CORE --> DEEP_DIVE: followup_chain_depth &gt;= 2
+    CORE --> DEEP_DIVE: kg_gap_score &lt; 0.3
+    DEEP_DIVE --> CORE: chain resets
+    CORE --> CLOSING: turn &gt;= 25
+    DEEP_DIVE --> CLOSING: turn &gt;= 25
+    CLOSING --> [*]
+</pre>
+</div>
+<p class="diagram-caption">Figure 6 — Interview phase state machine. Phase feeds into <code>router._compute_complexity_score()</code> as a bias term.</p>
+
+<h2 id="extension">7. Extension points</h2>
+
+<p>The design assumes you might want to extend or replace these:</p>
+
+<table>
+  <thead>
+    <tr><th>I want to…</th><th>Touch this</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Add a new reasoning mode</td>
+      <td><code>core/</code> — add <code>mymode.py</code> with <code>build_mymode_prompt()</code>; extend <code>ReasoningMode</code> enum in <code>types.py</code>; add a case in <code>system2._augment_messages_for_mode()</code></td>
+    </tr>
+    <tr>
+      <td>Change routing behavior</td>
+      <td><code>core/router.py</code> — edit <code>_compute_complexity_score()</code> or the pattern lists at the top</td>
+    </tr>
+    <tr>
+      <td>Add a persona</td>
+      <td>Drop a YAML into <code>reason_sot/persona/definitions/</code></td>
+    </tr>
+    <tr>
+      <td>Change cache block placement</td>
+      <td><code>llm/cache.py::build_system_blocks()</code> — be careful, this affects hit rates</td>
+    </tr>
+    <tr>
+      <td>Swap LLM provider</td>
+      <td>Replace <code>llm/client.py</code> — the rest of the codebase only depends on its public methods and <code>StreamEvent</code> types</td>
+    </tr>
+    <tr>
+      <td>Add a quality metric</td>
+      <td><code>scoring/metrics.py</code> — add <code>_score_myscore()</code> and wire into <code>score_session()</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Dependency rules</h3>
+
+<div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    interview["interview/<br/>(orchestration)"]
+    core["core/<br/>(reasoning)"]
+    llm["llm/<br/>(Anthropic boundary)"]
+    persona["persona/"]
+    types["types.py"]
+
+    interview --> core
+    interview --> llm
+    interview --> persona
+    core --> llm
+    persona --> types
+    interview --> types
+    core --> types
+    llm --> types
+
+    style types fill:#fff8c5,stroke:#d4a72c
+</pre>
+</div>
+<p class="diagram-caption">Figure 7 — Dependency rules. Arrows point "depends on." <code>core/</code> must never import from <code>interview/</code>. <code>types.py</code> is the single source of the shared vocabulary.</p>
+
+<h2 id="constraints">8. Design constraints</h2>
+
+<h3>Things that must stay true</h3>
+
+<ul>
+  <li>
+    <strong>Router is stateless and LLM-free.</strong> Introducing an LLM call here would reintroduce the latency
+    we're trying to avoid.
+  </li>
+  <li>
+    <strong>Reasoning-mode instructions go in the <em>last user message</em>, not the system prompt.</strong>
+    System-prompt changes bust the prefix cache (block 2 onward).
+  </li>
+  <li>
+    <strong>Thinking deltas never reach the caller.</strong> <code>system2.generate</code> and
+    <code>speculative.generate_speculative</code> consume them internally.
+  </li>
+  <li>
+    <strong>Cache block order is fixed:</strong> base → persona → KG → last user. Changing this invalidates the
+    cache prefix for everything downstream.
+  </li>
+  <li>
+    <strong><code>process_turn</code> always produces an <code>InterviewTurn</code> record</strong>, even on
+    failure, so session analytics stay consistent.
+  </li>
+</ul>
+
+<h3>Things we deliberately don't do</h3>
+
+<ul>
+  <li>No tool use, no agent loop, no external API integrations.</li>
+  <li>No fine-tuning. All behavior comes from prompts, routing, and cache placement.</li>
+  <li>No cross-session memory. Each <code>InterviewEngine</code> starts with an empty KG.</li>
+  <li>No vector embeddings in the KG — keyword matching only. Speed over sophistication.</li>
+  <li>No retry logic for Anthropic API errors. Failures become <code>StreamError</code> events; callers decide.</li>
+</ul>
+
+<h2>Next</h2>
+
+<ul>
+  <li><a href="./workflow.html">Workflow</a> — end-to-end turn sequence with the three generator paths.</li>
+  <li><a href="./approach.html">Approach</a> — the motivation behind this architecture.</li>
+  <li><a href="https://github.com/chakra-ai/ReasonSoT/tree/main/docs/design" target="_blank">design/</a> — deep dives on routing, reasoning modes, KG, and prefix caching.</li>
+</ul>
+
+</main>
+
+<footer>
+  <a href="https://github.com/chakra-ai/ReasonSoT">github.com/chakra-ai/ReasonSoT</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    securityLevel: 'loose',
+    flowchart: { curve: 'basis', padding: 14 },
+    sequence: { actorMargin: 40 }
+  });
+</script>
+
+</body>
+</html>
