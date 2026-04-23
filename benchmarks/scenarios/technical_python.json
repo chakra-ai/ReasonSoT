@@ -1,0 +1,17 @@
+{
+  "name": "technical_python",
+  "description": "10-turn technical Python interview with a mix of surface-level and deep responses",
+  "persona_name": "technical_interviewer",
+  "candidate_responses": [
+    "Hi, I'm ready to start. I've been working with Python for about 5 years now, mostly backend development.",
+    "For iterables I usually use list comprehensions and generators. Generators are more memory efficient because they yield values lazily instead of building the whole list in memory. I use them a lot when processing large files.",
+    "I think decorators are functions that wrap other functions. Like @staticmethod or @login_required in Flask. I've used them but I'm not sure exactly how they work under the hood.",
+    "For the rate limiter, I'd probably use Redis with a sliding window approach. Each request increments a counter with a TTL. At 10x scale, you'd need to shard the Redis cluster — maybe consistent hashing across multiple nodes. The tricky part is handling clock skew between nodes. I'd use a token bucket algorithm because it handles bursts better than fixed windows. You'd also want circuit breakers so if Redis goes down, you degrade gracefully rather than either allowing everything or blocking everything.",
+    "Yeah, async/await in Python uses an event loop — asyncio is the standard library. Coroutines are suspended at await points, and the event loop schedules other tasks. The GIL is still there, so it's not true parallelism, but it's great for I/O-bound work. I've used it extensively with aiohttp and FastAPI.",
+    "Testing... I use pytest mostly. I write unit tests and some integration tests. For mocking I use unittest.mock. I try to aim for good coverage but honestly sometimes I skip tests when deadlines are tight.",
+    "SQL optimization — I've dealt with slow queries. Usually it's missing indexes. I use EXPLAIN ANALYZE to find full table scans. Once I had a query joining 5 tables that was taking 30 seconds. Added a composite index on the two most-filtered columns and it dropped to 200ms. Also learned about covering indexes — where the index includes all columns the query needs so it never touches the heap.",
+    "For CI/CD I've set up GitHub Actions pipelines. We run linting, tests, build Docker images, and deploy to Kubernetes. I've also used Terraform for infrastructure as code. The main challenge was managing secrets — we ended up using HashiCorp Vault.",
+    "I'm not too familiar with design patterns honestly. I know singleton and factory pattern. I've seen observer pattern used in event systems but I haven't implemented it myself.",
+    "What I'm most proud of is migrating our monolith to microservices. It took about 8 months. We used the strangler fig pattern — gradually routing traffic from the monolith to new services. The hardest part was data migration. We ended up using event sourcing for a while to keep both systems in sync during the transition. I learned a lot about distributed systems tracing — we used Jaeger for that."
+  ]
+}

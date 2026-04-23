@@ -1,0 +1,15 @@
+{
+  "name": "mixed_adaptive",
+  "description": "8-turn mixed scenario testing persona adaptation — starts technical, shifts to behavioral",
+  "persona_name": "technical_interviewer",
+  "candidate_responses": [
+    "Hey, excited to be here. I'm a full-stack engineer with about 4 years of experience, mostly Python and React.",
+    "For Python concurrency, I've used threading, multiprocessing, and asyncio. The GIL means threads don't help with CPU-bound work but they're fine for I/O. For CPU-bound stuff I use multiprocessing or joblib. Asyncio is my go-to for web services — I've built several FastAPI apps that handle thousands of concurrent connections.",
+    "Hmm, I'm not really sure about database internals. I know B-trees are used for indexes and that helps with lookups. Something about pages and blocks? I mostly just use Django ORM and haven't had to think too much about what's happening at the storage level.",
+    "Actually, can I tell you about something that's been on my mind? I've been thinking about transitioning into engineering management. I love mentoring — I've been informally mentoring two junior engineers and it's the most rewarding part of my job. But I'm nervous about giving up the technical work.",
+    "The mentoring experience — one of my mentees was struggling with code reviews. They were taking feedback personally. I shared my own experience of getting tough reviews early in my career and how it actually made me better. We set up a system where I'd do a pre-review of their PRs before they went to the team. Gradually they built confidence and now they're one of the most thoughtful reviewers on the team.",
+    "My biggest failure was a production outage I caused. I pushed a migration that locked a critical table for 45 minutes during peak hours. I should have tested it against a production-sized dataset first. After that I championed our team adopting a migration review checklist and we started doing shadow deployments for schema changes. It was humbling but it changed how I approach risk.",
+    "What I value most in a workplace is autonomy and impact. I want to work on problems that matter and have the freedom to solve them my way. In my current role I have that, but I feel like I've hit a ceiling in terms of scope. That's partly why I'm exploring management — it could expand my impact beyond just my own code.",
+    "I think my superpower is translating between technical and non-technical stakeholders. Engineers trust me because I'm technical, and product folks trust me because I speak their language. I've used that to unblock several projects where teams were talking past each other."
+  ]
+}
